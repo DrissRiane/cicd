@@ -1,0 +1,35 @@
+---
+- name: Register GitLab Runner with Docker Socket Binding
+  hosts: localhost
+  become: true
+
+  vars:
+    gitlab_url: "http://192.168.112.3"
+    gitlab_runner_token: "GR1348941FDzk-my2ss-5yWp5acE-"
+    gitlab_minikube_runner_token: "GR1348941FDzk-my2ss-5yWp5acE-"
+
+  tasks:
+    - name: Register GitLab Runner with Docker Socket Binding
+      shell: |
+        gitlab-runner register --non-interactive \
+          --url {{ gitlab_url }} \
+          --registration-token {{ gitlab_runner_token }} \
+          --executor docker \
+          --description "Docker Runner" \
+          --docker-image "docker:19.03.12" \
+          --docker-privileged \
+          --docker-volumes "/var/run/docker.sock:/var/run/docker.sock"
+      args:
+        creates: /etc/gitlab-runner/config.toml
+
+    - name: Register GitLab Runner for Minikube
+      shell: |
+        gitlab-runner register --non-interactive \
+          --url {{ gitlab_url }} \
+          --registration-token {{ gitlab_minikube_runner_token }} \
+          --executor shell \
+          --description "Minikube Runner" \
+          --shell /bin/bash \
+          --tag-list "minikube"
+      args:
+        creates: /etc/gitlab-runner/config.toml

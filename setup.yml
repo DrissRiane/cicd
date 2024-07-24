@@ -1,0 +1,159 @@
+---
+- name: Setup Minikube, GitLab CE, GitLab Runner, Jenkins, and Docker
+  hosts: localhost
+  become: true
+
+  vars:
+    your_username: "osboxes"
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+      become: true
+      tags:
+        - update_upgrade
+
+    - name: Install dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - gnupg
+        state: present
+      become: true
+      tags:
+        - install_dependencies
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      become: true
+      tags:
+        - add_docker_gpg_key
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+      become: true
+      tags:
+        - add_docker_repository
+
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: present
+      become: true
+      tags:
+        - install_docker
+
+    - name: Add user to Docker group
+      user:
+        name: "{{ your_username }}"
+        groups: docker
+        append: yes
+      become: true
+      tags:
+        - add_user_docker_group
+
+    - name: Install Minikube
+      shell: |
+        curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        chmod +x minikube
+        mv minikube /usr/local/bin/
+      become: true
+      tags:
+        - install_minikube
+
+    - name: Install Kubectl
+      shell: |
+        curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x ./kubectl
+        mv ./kubectl /usr/local/bin/kubectl
+      become: true
+      tags:
+        - install_kubectl
+
+    - name: Start Minikube
+      shell: |
+        minikube start --driver=docker
+      tags:
+        - start_minikube
+      become: false
+      
+    - name: Set up GitLab CE repository
+      shell: curl -s https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash
+      become: true
+      tags:
+        - setup_gitlab_repo
+
+    - name: Install GitLab CE
+      apt:
+        name: gitlab-ce
+        state: present
+      become: true
+      tags:
+        - install_gitlab
+
+    - name: Install GitLab Runner
+      shell: |
+        curl -L --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64
+        chmod +x /usr/local/bin/gitlab-runner
+        useradd --comment 'GitLab Runner' --create-home gitlab-runner --shell /bin/bash
+        gitlab-runner install --user=gitlab-runner --working-directory=/home/gitlab-runner
+        gitlab-runner start
+      become: true
+      tags:
+        - install_gitlab_runner
+    - name: Install default JRE
+      apt:
+        name: default-jre
+        state: present
+      tags:
+        - install_default_jre
+
+    - name: Install default JDK
+      apt:
+        name: default-jdk
+        state: present
+      tags:
+        - install_default_jdk
+        
+    - name: T GPG de Jenkins
+      get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /usr/share/keyrings/jenkins-keyring.asc
+      tags:
+        - install_jenkins
+
+    - name: Ajouter le depo Jenkins
+      ansible.builtin.shell: |
+        echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+      tags:
+        - install_jenkins
+
+    - name: update les informations sur les paquets
+      apt:
+        update_cache: yes
+      tags:
+        - install_jenkins
+
+    - name: Installer Jenkins
+      apt:
+        name: jenkins
+        state: present
+      tags:
+        - install_jenkins
+
+    - name: Demarrer le service Jenkins
+      service:
+        name: jenkins
+        state: started
+        enabled: true
+      tags:
+        - install_jenkins

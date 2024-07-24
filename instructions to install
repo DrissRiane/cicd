@@ -1,0 +1,11 @@
+- docker- composse install:
+curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+chmod +x /usr/local/bin/docker-compose
+
+- creer vm ubuntu 24.04 sur virtualbox: 
+#setup docker, gitlabCE , gitlab Runner, jenkins
+- ansible-playbook setup.yml --ask-become-pass -f 4 
+#regiter runner 
+- gitlab-runner register  using config toml:
+

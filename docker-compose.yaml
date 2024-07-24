@@ -1,0 +1,60 @@
+
+services:
+  #gitlab:
+    # image: 'gitlab/gitlab-ce:latest'
+    # restart: always
+    # hostname: 'gitlab.driss.com'
+    # environment:
+      # GITLAB_OMNIBUS_CONFIG: |
+        # external_url 'http://gitlab.driss.com'
+    # ports:
+      # - '80:80'
+      # - '2222:2222'
+    # volumes:
+      # - './config:/etc/gitlab'
+      # - './logs:/var/log/gitlab'
+      # - './data:/var/opt/gitlab'
+    # networks:
+      # - gitlab
+
+  # gitlab-runner:
+    # image: 'gitlab/gitlab-runner:latest'
+    # depends_on:
+      # - gitlab
+    # environment:
+      # GIT_SSL_NO_VERIFY: "1"
+    # volumes:
+      # - '/var/run/docker.sock:/var/run/docker.sock'
+      # - './config-runner:/etc/gitlab-runner'
+    # ports:
+      # - '8093:8093'
+    # restart: unless-stopped
+    # networks:
+      # - gitlab
+
+  jenkins:
+    image: 'jenkins/jenkins:lts'
+    user: root
+    restart: always
+    ports:
+      - '8011:8080'
+      - '50000:50000'
+    volumes:
+      - './jenkins_home:/var/jenkins_home'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    networks:
+      - jenk
+
+#  nexus:
+#    image: 'sonatype/nexus3'
+#    restart: always
+#    ports:
+#      - '8081:8081'
+#      - '5001:5000'
+#    volumes:
+#      - './nexus-data:/nexus-data'
+#    networks:
+#      - jenk
+
+networks:
+  jenk:
