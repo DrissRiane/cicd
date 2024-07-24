@@ -27,6 +27,14 @@ dockerImage.push()
 }
 }
 }
+stage('Run the Docker image') {
+	steps {
+		script {
+			// Exécuter l'image Docker
+			sh "docker run -d --name -p 3001:3000 nodeapp_${BUILD_NUMBER} ${registry}:${BUILD_NUMBER}"
+		}
+	}
+}
 stage('Cleaning up') {
 steps{
 sh "docker rmi $registry:$BUILD_NUMBER"
