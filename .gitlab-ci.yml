@@ -58,10 +58,10 @@ deploy_to_minikube:
     - chmod +x ./kubectl
     - mv ./kubectl /usr/local/bin/kubectl
     - mkdir -p /root/.kube
-    - echo "$KUBECONFIG"  > /root/.kube/config
-    - echo "$CA"  > /root/.kube/ca.crt
-    - echo "$CLIENTCRT"  > /root/.kube/client.crt
-    - echo "$CLIENTKEY"  > /root/.kube/client.key
+    - cat "$KUBECONFIG"  > /root/.kube/config
+    - cat "$CA"  > /root/.kube/ca.crt
+    - cat "$CLIENTCRT"  > /root/.kube/client.crt
+    - cat "$CLIENTKEY"  > /root/.kube/client.key
     - cat  /root/.kube/client.key
     - kubectl config set-cluster minikube --server=https://192.168.49.2:8443 --certificate-authority=/root/.kube/ca.crt
     - kubectl config set-credentials minikube --client-certificate=/root/.kube/client.crt --client-key=/root/.kube/client.key
