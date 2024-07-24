@@ -58,12 +58,13 @@ deploy_to_minikube:
     - chmod +x ./kubectl
     - mv ./kubectl /usr/local/bin/kubectl
     - mkdir -p /root/.kube
-    - cp  $KUBECONFIG /root/.kube/config
-    - cp  $CA /root/.kube/config
-    - cp  $CLIENTCRT /root/.kube/config 
-    - cp  $CLIENTKEY /root/.kube/config
-    - kubectl config set-cluster minikube --server=https://192.168.49.2:8443 --certificate-authority=$CA
-    - kubectl config set-credentials minikube --client-certificate=$CLIENTCRT --client-key=$CLIENTCRT
+    - echo "$KUBECONFIG"  > /root/.kube/config
+    - echo "$CA"  > /root/.kube/ca.crt
+    - echo "$CLIENTCRT"  > /root/.kube/client.crt
+    - echo "$CLIENTKEY"  > /root/.kube/client.key
+    - cat  /root/.kube/client.key
+    - kubectl config set-cluster minikube --server=https://192.168.49.2:8443 --certificate-authority=/root/.kube/ca.crt
+    - kubectl config set-credentials minikube --client-certificate=/root/.kube/client.crt --client-key=/root/.kube/client.key
     - kubectl config set-context minikube --cluster=minikube --namespace=$KUBE_NAMESPACE --user=minikube
     - kubectl config use-context minikube
     - kubectl get nodes
