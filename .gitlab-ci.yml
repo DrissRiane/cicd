@@ -9,10 +9,6 @@ variables:
   DOCKER_HOST: "tcp://192.168.112.3:2375"
   DOCKER_REGISTRY: 192.168.112.3:5000 
   DOCKER_IMAGE: $DOCKER_REGISTRY/myapp:$CI_COMMIT_SHA
-  KUBECONFIG: "/home/osboxes/.kube/config"
-  CA: "/home/osboxes/.minikube/ca.crt"
-  CLIENTCRT: "/home/osboxes/.minikube/profiles/minikube/client.crt"
-  CLIENTKEY: "/home/osboxes/.minikube/profiles/minikube/client.key"
   KUBE_NAMESPACE: "default"
 cache:
   key: ${CI_COMMIT_REF_SLUG}
@@ -25,50 +21,63 @@ stages:
   - deploy
 
 before_script:
-  - chmod +x node_modules/.bin/mocha
+ - chmod +x node_modules/.bin/mocha
 
 build_job:
-  stage: build
-  script:
-    - docker build -t $DOCKER_IMAGE .
-    - docker push $DOCKER_IMAGE
-
+ stage: build
+ script:
+   - docker build -t $DOCKER_IMAGE .
+   - docker push $DOCKER_IMAGE
 test_job:
-  stage: test
-  script:
-    - docker run --rm $DOCKER_IMAGE npm test 
+ stage: test
+ script:
+   - docker run --rm $DOCKER_IMAGE npm test 
 
-# deploy_to_Docker:
-#   stage: deploy
-#
-#   script:
-#     - docker pull $DOCKER_IMAGE
-#     - docker run -d -p 3000:3000 $DOCKER_IMAGE
+deploy_to_Docker:
+  stage: deploy
+
+  script:
+    - |
+      # Nom du conteneur à arrêter et supprimer
+      CONTAINER_NAME=myapp
+
+      # Forcer l'arrêt du conteneur s'il est en cours d'exécution
+      if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
+          echo "Stopping container $CONTAINER_NAME..."
+          docker stop $CONTAINER_NAME
+      fi
+
+      # Supprimer le conteneur s'il existe
+      if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
+          echo "Removing container $CONTAINER_NAME..."
+          docker rm $CONTAINER_NAME
+      fi
+
+      # Exécuter un nouveau conteneur avec l'image spécifiée
+      echo "Running new container with image $DOCKER_IMAGE..."
+      docker run -d --name $CONTAINER_NAME -p 3000:3000 $DOCKER_IMAGE
 deploy_to_minikube:
   image: buildpack-deps:bullseye-curl  
   stage: deploy
-  variables:
-    KUBECONFIG: "/home/osboxes/.kube/config"
-    CA: "/home/osboxes/.minikube/ca.crt"
-    CLIENTCRT: "/home/osboxes/.minikube/profiles/minikube/client.crt"
-    CLIENTKEY: "/home/osboxes/.minikube/profiles/minikube/client.key"
-    KUBE_NAMESPACE: "default"
   script:
     - curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
     - chmod +x ./kubectl
     - mv ./kubectl /usr/local/bin/kubectl
-    - mkdir -p /root/.kube
-    - cat "$KUBECONFIG"  > /root/.kube/config
+    - mkdir -p /root/.kube 
+    - cat "$KUBECONFIG" > /root/.kube/config
     - cat "$CA"  > /root/.kube/ca.crt
     - cat "$CLIENTCRT"  > /root/.kube/client.crt
     - cat "$CLIENTKEY"  > /root/.kube/client.key
-    - cat  /root/.kube/client.key
     - kubectl config set-cluster minikube --server=https://192.168.49.2:8443 --certificate-authority=/root/.kube/ca.crt
     - kubectl config set-credentials minikube --client-certificate=/root/.kube/client.crt --client-key=/root/.kube/client.key
-    - kubectl config set-context minikube --cluster=minikube --namespace=$KUBE_NAMESPACE --user=minikube
     - kubectl config use-context minikube
     - kubectl get nodes
-    - kubectl apply -f kube_manifests/deployment.yaml
+    - |
+      if kubectl get deployment myapp >/dev/null 2>&1; then
+        echo "Deployment exists. Updating..."
+        kubectl delete deployment myapp       
+      fi
+    - kubectl create deployment myapp --image=$DOCKER_IMAGE --port=3000
     - kubectl apply -f kube_manifests/service.yaml
     
  
